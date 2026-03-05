@@ -1,68 +1,50 @@
-# Module 1: Programming Foundations - Compilers & Binary
+# Module 1: Programming Foundations - Compilers & Binary Representation
 
-## Topic: Compilers vs Interpreters
+## Topic: Compilers vs Interpreters & The Pipeline
 
 ### Concept Explanation
-Programs written in high-level languages (Java, C++, Python) must be converted into Machine Code (1s and 0s) to run.
-- **Compiler**: Translates the entire source code into machine code at once (e.g., C++).
-- **Interpreter**: Translates and executes the code line-by-line (e.g., Python).
+The journey from Source Code to Machine Code involves a sophisticated multi-stage pipeline.
 
-### Why It Exists
-- **Compilers**: High performance. The translation happens once, resulting in an executable file.
-- **Interpreters**: Flexibility and easier debugging. Platform independence.
+### Internal Working: The Compiler Pipeline
+1.  **Lexical Analysis (Scanning)**: Converts a stream of characters into **Tokens** (e.g., `if`, `(`, `x`, `==`, `10`).
+2.  **Syntax Analysis (Parsing)**: Checks tokens against language rules and builds an **Abstract Syntax Tree (AST)**.
+3.  **Semantic Analysis**: Type checking and scope verification (e.g., "Is variable 'x' declared?").
+4.  **Intermediate Code Generation**: Translates AST to a platform-independent IR (like JVM Bytecode or LLVM IR).
+5.  **Optimization**: Rewriting code to be more efficient (e.g., Constant Folding: `5 + 2` -> `7`).
+6.  **Code Generation**: Producing the final platform-specific machine code.
 
-### Internal Working
-- **Compiler Pipeline**: Lexical Analysis -> Syntax Analysis -> Semantic Analysis -> IR Generation -> Optimization -> Code Generation.
-- **Interpreter Pipeline**: Reads a line, parses it, executes it immediately via a VM or host environment.
-
-### JVM Behavior: The Hybrid Approach
-Java is unique. It is **compiled** into Bytecode (`.class` files). This bytecode is then **interpreted** by the JVM. To improve speed, the JVM uses a **JIT (Just-In-Time) Compiler** to compile frequently used bytecode into native machine code at runtime.
-
-### Real World Use Cases
-- **Java**: Used for cross-platform enterprise apps because of the "Compile Once, Run Anywhere" (WORA) philosophy.
-- **C++**: Used for game engines where every millisecond of performance counts.
-
-### Code Example (Conceptual)
-**Java (Hybrid):**
-```bash
-javac MyFile.java   # Compiles to Bytecode (MyFile.class)
-java MyFile         # JVM interprets/JIT-compiles Bytecode
-```
-
-### Common Mistakes
-- Thinking Java is "slow" because it's interpreted. Modern JIT compilers make Java nearly as fast as C++ for many tasks.
+### JVM Behavior: De-optimization
+The JVM JIT compiler can compile code based on assumptions. If those assumptions change (e.g., a new class is loaded that overrides a method), the JVM can **De-optimize** and revert to interpreted mode.
 
 ---
 
-## Topic: Binary & Data Representation
+## Topic: Binary Representation & Floating Point (IEEE 754)
 
 ### Concept Explanation
-Computers represent all data (numbers, text, images, sound) as a sequence of bits (Binary Digits: 0 and 1).
+Computers use Binary, but representing real numbers (fractions) is difficult.
 
-### Why It Exists
-Electronic circuits are most stable when representing two states: ON (1) or OFF (0). High/Low voltage.
+### Internal Working: IEEE 754 Standard
+A float is stored in 3 parts:
+1.  **Sign Bit**: 0 for positive, 1 for negative.
+2.  **Exponent**: Scaled to move the decimal point.
+3.  **Mantissa (Significand)**: The actual digits of the number.
 
-### Internal Working
-- **Bits & Bytes**: 8 bits = 1 Byte.
-- **Number Systems**:
-    - **Binary (Base 2)**: 0, 1.
-    - **Decimal (Base 10)**: 0-9.
-    - **Hexadecimal (Base 16)**: 0-9, A-F (Used for memory addresses).
+### Memory Behavior: Precision Loss
+Some numbers, like `0.1`, cannot be represented exactly in binary (they become infinite repeating fractions). This is why `0.1 + 0.2 != 0.3` in Java.
 
-### Memory Behavior
-Integers are stored using **Two's Complement** for signed numbers. Floating points use the **IEEE 754** standard.
+### Best Practices
+- Never use `float` or `double` for monetary calculations. Use **BigDecimal**.
+- For bitwise flags, use powers of 2 (1, 2, 4, 8) and the bitwise AND/OR operators.
 
-### JVM Behavior
-Java defines strict sizes for primitive types (e.g., `int` is always 32-bit signed) regardless of the underlying OS. This ensures portability.
-
-### Code Example
+### Code Example: Bitwise Magic
 ```java
-int binaryValue = 0b1010; // Binary for 10
-int hexValue = 0x0A;      // Hex for 10
-System.out.println(binaryValue == hexValue); // true
+int READ = 1;  // 0001
+int WRITE = 2; // 0010
+int permissions = READ | WRITE; // 0011
+boolean canRead = (permissions & READ) != 0; // true
 ```
 
 ### Exercises
-1. Convert the decimal number 25 into Binary and Hexadecimal.
-2. What is the maximum value that can be stored in an 8-bit unsigned integer? (Answer: 255).
-3. Explain why `0.1 + 0.2 != 0.3` in many programming languages. (Hint: IEEE 754 Floating Point precision).
+1. Draw the Abstract Syntax Tree for the expression `result = (a + b) * 5`.
+2. Convert the binary `1101.101` to decimal.
+3. Why does Java have both `>>` (arithmetic shift) and `>>>` (logical shift)?

@@ -1,70 +1,60 @@
-# Module 2: Java Language Mastery - Basics
+# Module 2: Java Language Mastery - Basics & Memory Layout
 
-## Topic: Variables & Data Types
+## Topic: Primitive vs. Wrapper Types (Memory Overhead)
 
 ### Concept Explanation
-Variables are named containers for data. Java is **Strongly Typed**, meaning every variable must have a declared type.
+Java provides 8 primitives (`int`, `long`, etc.) and corresponding Wrapper classes (`Integer`, `Long`).
 
-### Internal Working
-- **Primitives**: Stored directly on the **Stack**. (int, double, boolean, etc.)
-- **Reference Types**: The variable stores a memory address (on the Stack) that points to the actual object on the **Heap**.
+### Internal Working: Memory Layout
+- **int (Primitive)**: Always 32-bits (4 bytes). Stored directly on the stack or as part of an object on the heap.
+- **Integer (Wrapper)**: An Object on the heap.
+    - **Header**: 12 bytes (Mark Word + Klass Pointer).
+    - **Data**: 4 bytes (The actual int).
+    - **Padding**: 0-4 bytes to align to 8-byte boundaries.
+    - **Total**: Usually **16 or 24 bytes** for a single integer!
 
-### Data Types Table
-| Type | Size | Range |
-| :--- | :--- | :--- |
-| byte | 8-bit | -128 to 127 |
-| int | 32-bit | -2B to 2B |
-| long | 64-bit | Very large |
-| float | 32-bit | Decimal |
-| double| 64-bit | Precise decimal |
-| char | 16-bit | Unicode character |
-
-### JVM Behavior: Type Promotion
-In operations like `int + long`, Java automatically promotes the smaller type to the larger one to prevent overflow.
+### Why It Exists: Autoboxing
+The automatic conversion between primitives and wrappers. Convenient but can cause performance bottlenecks if done in a loop (creating millions of garbage objects).
 
 ---
 
-## Topic: Control Flow & Loops
+## Topic: Array Memory Layout & Bounds Checking
 
 ### Concept Explanation
-- **If/Else**: Decision making.
-- **Switch**: Multi-way branch.
-- **For/While/Do-While**: Iteration.
+An array in Java is an **Object**.
 
-### Code Example: The Fibonacci Sequence
-```java
-public void printFibonacci(int count) {
-    int n1 = 0, n2 = 1;
-    for (int i = 0; i < count; i++) {
-        System.out.print(n1 + " ");
-        int sum = n1 + n2;
-        n1 = n2;
-        n2 = sum;
-    }
-}
-```
+### Internal Working: Heap Layout
+1.  **Object Header**: 12 bytes.
+2.  **Array Length**: 4 bytes.
+3.  **Data**: Elements of the array.
+4.  **Padding**: Alignment.
+
+### JVM Behavior: Bounds Checking
+For every array access (`arr[i]`), the JVM performs a range check at runtime.
+- **Optimization**: The JIT compiler can "Hoist" these checks out of loops if it can prove `i` is always safe, reducing overhead.
+
+### Code Example: Memory Usage Calculation
+An `int[1000]` array:
+- Header + Length: 16 bytes.
+- Data: 000 \times 4 = 4000$ bytes.
+- Total: ~4016 bytes.
+
+An `Integer[1000]` array:
+- Array of References: 000 \times 4$ (or 8) bytes = 4000 bytes.
+- Plus 1000 Integer Objects on the heap: 000 \times 16 = 16000$ bytes.
+- **Total: ~20,000 bytes!** (5x more than primitive array).
 
 ---
 
-## Topic: Strings & Arrays
+## Topic: Strings - The Pool & Internal Representation
 
-### Concept Explanation
-- **Arrays**: Fixed-size sequences of elements of the same type.
-- **Strings**: Objects representing sequences of characters.
+### Internal Working: Compact Strings (Java 9+)
+Previously, Java used `char[]` (2 bytes per char) for Strings. Now, if a string only contains Latin-1 characters, it uses `byte[]` (1 byte per char) to save 50% memory.
 
-### Internal Working: String Pool
-Strings in Java are **Immutable**. When you create a literal string (`String s = "Hello"`), the JVM puts it in the **String Constant Pool** in the Heap. If you create another string with the same value, it points to the same memory address.
-
-### Code Example
-```java
-String s1 = "Java";
-String s2 = "Java";
-System.out.println(s1 == s2); // true (same reference)
-
-int[] numbers = {1, 2, 3};
-System.out.println(numbers.length); // 3
-```
+### Best Practices
+- Use `ArrayList<Integer>` only when necessary; use primitive arrays or libraries like FastUtil for performance-critical data.
+- Avoid String concatenation in loops; use `StringBuilder`.
 
 ### Exercises
-1. Write a program to find the largest number in an array.
-2. Write a program to reverse a String without using `StringBuilder.reverse()`.
+1. Calculate the memory footprint of a `String` object containing the text "Hello".
+2. Explain the "Integer Cache" (Integer.valueOf) and how it affects memory.

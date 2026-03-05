@@ -1,55 +1,54 @@
-# Module 10: Advanced Android Engineering
+# Module 10: Advanced Android Engineering - Library Internals
 
-## Topic: Architecture (MVVM + Repository)
+## Topic: Hilt / Dagger Code Generation
 
 ### Concept Explanation
-The modern standard for building scalable Android apps.
-- **ViewModel**: Acts as a bridge between the View and the Model. Survivors rotation.
-- **Repository**: Single source of truth. Decides whether to fetch data from the Network (Retrofit) or the Local DB (Room).
+Dependency Injection libraries like Hilt aren't just "Magic." They generate regular Java code to handle object creation.
 
-### Why It Exists
-To make code testable and maintainable. The View (Activity) only cares about observing data, not how it's fetched.
+### Internal Working: Annotation Processing
+When you use `@Inject` or `@Module`, Hilt runs an **Annotation Processor** during compilation.
+1.  **Factories**: For every class with `@Inject`, Hilt generates a `Factory` class that knows how to call `new MyClass(deps)`.
+2.  **MembersInjectors**: For Activities/Fragments, Hilt generates a `MembersInjector` that sets the fields of your Activity since the system (AMS) creates the Activity instance, not Hilt.
+3.  **Hilt_MainActivity**: Hilt actually creates a hidden base class that your Activity extends to perform the injection during `onCreate()`.
+
+### Performance Behavior
+Because Hilt generates code at **Compile-Time**, there is zero reflection overhead at runtime, making it significantly faster than libraries like Guice.
 
 ---
 
-## Topic: Dependency Injection (Dagger/Hilt)
+## Topic: Room Query Plans & SQLite
 
 ### Concept Explanation
-Hilt is the recommended DI library for Android (built on top of Dagger).
+Room is more than an ORM; it's a sophisticated SQL verification engine.
 
-### Why It Exists
-Managing object dependencies manually leads to "Boilerplate Hell." Hilt automates this and provides predefined scopes for Android components (`ActivityComponent`, `ViewModelComponent`).
+### Internal Working: The Generator
+At compile-time, Room:
+1.  **Validates SQL**: It checks your `@Query` strings against the database schema. If you mistype a column name, the app **won't compile**.
+2.  **Generated Implementation**: Room creates a class (`MyDao_Impl`) that handles all the boilerplate:
+    - Opening/Closing cursors.
+    - Converting Cursor rows into Java Objects.
+    - Handling Threading (Ensuring Room doesn't run on the Main Thread).
+
+### Advanced: FTS (Full-Text Search)
+Room supports SQLite's **FTS4/FTS5** modules for extremely fast text searching across millions of records.
 
 ---
 
-## Topic: Room Persistence Library
+## Topic: Retrofit Dynamic Proxies
 
 ### Concept Explanation
-An abstraction layer over SQLite.
+How does Retrofit implement an interface you only defined?
 
-### Key Components
-1.  **Entity**: Represents a database table (`@Entity`).
-2.  **DAO (Data Access Object)**: Contains methods used for accessing the database (`@Dao`).
-3.  **Database**: The main entry point for the underlying connection (`@Database`).
+### Internal Working: `java.lang.reflect.Proxy`
+When you call `retrofit.create(ApiService.class)`:
+1.  Retrofit creates a **Dynamic Proxy** at runtime.
+2.  When you call `api.getUser()`, the Proxy's `InvocationHandler` catches the call.
+3.  Retrofit looks at the annotations (`@GET`), builds an OkHttp request, executes it, and parses the result using Gson/Moshi.
 
----
-
-## Topic: Networking with Retrofit
-
-### Concept Explanation
-A type-safe HTTP client for Android and Java.
-
-### Internal Working
-Retrofit uses **Reflection** and **Dynamic Proxies** to convert an interface into a network caller. It uses **OkHttp** for the actual connection and **Gson** or **Moshi** for JSON parsing.
-
-### Code Example: Retrofit Interface
-```java
-public interface ApiService {
-    @GET("users/{id}")
-    Call<User> getUser(@Path("id") String userId);
-}
-```
+### Best Practices
+- Use `@Binds` instead of `@Provides` in Hilt to reduce code generation size.
+- Always use `EXPLAIN QUERY PLAN` for complex Room queries to identify slow table scans.
 
 ### Exercises
-1. What is the difference between `LiveData` and `StateFlow`?
-2. Implement a simple Room DAO for a "Task" entity.
+1. Look at the `build/generated` folder in an Android project and find a Hilt `Factory` class.
+2. Explain the difference between `@Component` and `@Module` in Dagger/Hilt.

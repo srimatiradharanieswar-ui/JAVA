@@ -1,46 +1,47 @@
-# Module 9: Android System Internals
+# Module 9: Android System Internals - Boot & IPC
 
-## Topic: Activity Lifecycle
+## Topic: The Boot Process & Zygote
 
 ### Concept Explanation
-An Activity moves through various states managed by the OS.
+When you launch an app on Android, it starts almost instantly. This is because of the **Zygote** process.
 
-### Internal Working: The State Machine
-1.  **onCreate()**: Initial setup. View creation.
-2.  **onStart()**: Visible to the user.
-3.  **onResume()**: Interactive. Top of the stack.
-4.  **onPause()**: Leaving the screen. Save small amounts of data.
-5.  **onStop()**: No longer visible. Release heavy resources.
-6.  **onDestroy()**: Final cleanup.
-
-### Memory Behavior: Configuration Changes
-When the screen rotates, the Activity is **Destroyed** and **Re-created**.
-**Best Practice**: Use `ViewModel` to persist data across these changes.
+### Internal Working: The Forking Mechanism
+1.  **Zygote Initiation**: During system boot, a process called Zygote is started. It pre-loads all core Java classes and resources (ART, Framework libraries).
+2.  **App Launch**: When the user clicks an icon, the system doesn't start a new VM. It tells Zygote to **fork()** itself.
+3.  **Copy-on-Write (COW)**: The new app process shares all the memory of Zygote. Memory is only copied if the app modifies it. This saves massive amounts of RAM and time.
 
 ---
 
-## Topic: Fragment Lifecycle
+## Topic: Binder IPC (The Handshake)
 
 ### Concept Explanation
-Similar to Activity but has extra hooks for its host (`onAttach`, `onCreateView`, `onDetach`).
+Android is a multi-process system. Every app, and every system service (Camera, GPS, Window Manager), runs in a separate process. **Binder** is the high-performance glue that connects them.
+
+### Internal Working: The Kernel Driver
+Binder is implemented as a Linux Kernel Driver.
+1.  **Client-Side**: The app calls a proxy method.
+2.  **Kernel-Space**: The Binder driver copies the data once from the Client's memory to the Server's memory (Single-copy IPC).
+3.  **Server-Side**: The target process executes the method and returns the result.
+
+### Real World Use Case: `AIDL`
+When you want to expose a Service to other apps, you use **Android Interface Definition Language (AIDL)** to generate the Binder proxy/stub code.
 
 ---
 
-## Topic: Intent System (Internal)
-
-### Internal Working: The Binder IPC
-Intents are not just local calls. They often cross process boundaries via **Binder**, Android's high-performance Inter-Process Communication (IPC) mechanism.
-The **Activity Manager Service (AMS)** in the system process receives the Intent and decides which app component to launch.
-
----
-
-## Topic: Storage Systems
+## Topic: Activity Manager Service (AMS) & Task Management
 
 ### Concept Explanation
-1.  **Internal Storage**: Private to the app (`data/data/pkg`).
-2.  **External Storage**: Shared (Photos, Documents). Requires Scoped Storage (Android 10+).
-3.  **SharedPreferences**: XML-based Key-Value store for small settings.
+AMS is the "brain" of Android's UI. It lives in the `system_server` process.
+
+### Internal Working: Starting an Activity
+1.  **App Process**: Calls `startActivity()`. This sends a Binder message to AMS.
+2.  **AMS Process**: Checks permissions, manages the "Back Stack," and determines if the target process is running.
+3.  **AMS Process**: If not running, AMS tells Zygote to fork a new process.
+4.  **Target Process**: AMS sends a message to the new process to call `ActivityThread.main()` and then `onCreate()`.
+
+### Interview Questions
+1. Why is Binder faster than standard Linux pipes or sockets?
+2. What is a "TransactionTooLargeException"? (Binder has a 1MB limit for transaction data).
 
 ### Exercises
-1. What happens to an Activity if you press the "Home" button? (onPause -> onStop).
-2. What is the difference between `Serializable` and `Parcelable` in Android? (Parcelable is faster and optimized for IPC).
+1. Explain the "Low Memory Killer" (LMK) and how it uses OOM scores to decide which app to kill first.
